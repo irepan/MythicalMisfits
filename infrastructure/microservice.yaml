@@ -318,3 +318,8 @@ Outputs:
     Value: !Ref MythicaTaskSecurityGroup
     Export:
       Name: MythicaTaskSecurityGroup
+  MythicalMonolithTargetGroup:
+    Description: Mythical monolith target group
+    Value: !Ref MythicalMonolithTargetGroup
+    Export:
+      Name: MythicalMonolithTargetGroup
