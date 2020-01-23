@@ -28,8 +28,6 @@ Metadata:
           - CognitoAdminEmail
       - Label:
           default: S3 Configuration
-        Parameters:
-          - SkipBucket
     ParameterLabels:
       CognitoAdminEmail:
         default: Enter a valid email address to be used for Kibana Cognito authentication. Do NOT leave this default value, it is there only as an example.
@@ -181,52 +179,6 @@ Resources:
             Action:
               - "sts:AssumeRole"
 
-  MisfitsECSAutoScaleRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: application-autoscaling.amazonaws.com
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole
-
-  LikeScaleDownAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmDescription: Scale in containers if ALB RequestCount SUM metric < 100
-      MetricName: RequestCount
-      Namespace: AWS/ApplicationELB
-      EvaluationPeriods: "2"
-      Period: "60"
-      Statistic: Sum
-      Threshold: "1000"
-      ComparisonOperator: LessThanOrEqualToThreshold
-      Dimensions:
-        - Name: LoadBalancer
-          Value: !GetAtt MythicalLoadBalancer.LoadBalancerFullName
-        - Name: TargetGroup
-          Value: !GetAtt MythicalLikeTargetGroup.TargetGroupFullName
-
-  LikeScaleUpAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmDescription: Scale out containers if ALB RequestCount SUM metric > 1000
-      MetricName: RequestCount
-      Namespace: AWS/ApplicationELB
-      EvaluationPeriods: "2"
-      Period: "60"
-      Statistic: Sum
-      Threshold: "1000"
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      Dimensions:
-        - Name: LoadBalancer
-          Value: !GetAtt MythicalLoadBalancer.LoadBalancerFullName
-        - Name: TargetGroup
-          Value: !GetAtt MythicalLikeTargetGroup.TargetGroupFullName
-
   # Assigns the roles to the Identity Pool
   IdentityPoolRoleMapping:
     Type: "AWS::Cognito::IdentityPoolRoleAttachment"
@@ -310,3 +262,30 @@ Resources:
       AdvancedOptions:
         rest.action.multi.allow_explicit_index: "true"
         indices.fielddata.cache.size: 40
+
+Outputs:
+  ESDomainEndpoint:
+    Description: ES domain endpoint URL
+    Value: !Sub https://${MythicalElasticsearch.DomainEndpoint}
+    Export:
+      Name: ESDomainEndpoint
+  KibanaLoginURL:
+    Description: Kibana login URL
+    Value: !Sub https://${MythicalElasticsearch.DomainEndpoint}/_plugin/kibana/
+    Export:
+      Name: KibanaLoginURL
+  CWLLambdaExecRole:
+    Description: IAM role for ES cross account access
+    Value: !Sub ${LoggingMasterRole.Arn}
+    Export:
+      Name: CWLLambdaExecRole
+  CognitoUserPoolId:
+    Description: Cognito Userpool Id
+    Value: !Ref UserPool
+    Export:
+      Name: CognitoUserPoolId
+  CognitoUserPoolClientId:
+    Description: Cognito UserPoolClientId
+    Value: !Ref UserPoolClient
+    Export:
+      Name: CognitoUserPoolClientId

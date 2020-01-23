@@ -1,8 +1,10 @@
 #!/bin/bash
 
-scriptDir=$(dirname $0)
+scriptDir=$(cd `dirname $0` ; pwd)
 
-#$scriptDir/data.sh
-#$scriptDir/cluster.sh
+nohup $scriptDir/cognito.sh </dev/null >/dev/null 2>&1 &
+nohup $scriptDir/data.sh </dev/null >/dev/null 2>&1 &
+
+$scriptDir/cluster.sh
 $scriptDir/microservice.sh
 $scriptDir/dockerOperations.sh

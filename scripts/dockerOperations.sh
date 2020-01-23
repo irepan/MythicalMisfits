@@ -1,6 +1,6 @@
 #!/bin/bash
 
-scriptDir=$(dirname $0)
+scriptDir=$(cd `dirname $0` ; pwd)
 . $scriptDir/stack-commons.sh
 STACK_NAME='MysfitsMicroServiceStack'
 OUTPUT_FILE_NAME="$scriptDir/../$STACK_NAME.outputs.json"

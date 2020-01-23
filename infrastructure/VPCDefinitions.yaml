@@ -299,3 +299,8 @@ Outputs:
     Value: !GetAtt MythicalLoadBalancer.DNSName
     Export:
       Name: MythicalLoadBalancerDNSName
+  MythicalLoadBalancerFullName:
+    Description: Load Balancer Full Name
+    Value: !GetAtt MythicalLoadBalancer.LoadBalancerFullName
+    Export:
+      Name: MythicalLoadBalancerFullName
