@@ -1,5 +1,8 @@
 #!/bin/bash
 
+export scriptDir=$(cd `dirname $0` ; pwd)
+export REGION=$(aws configure get region)
+
 function test_stack {
     typeset var local STACK_NAME=$1
     aws cloudformation describe-stacks --stack-name $STACK_NAME >/dev/null 2>&1
@@ -16,9 +19,24 @@ function stack_exists {
     [ $(test_stack "$STACK_NAME") -eq 0 ]
 }
 
+function get_stack_output_file {
+    typeset var local STACK_NAME=$1
+    echo "$scriptDir/../$STACK_NAME.outputs.json"
+}
+
+function get_stack_outputs {
+    typeset var local STACK_NAME=$1
+    typeset var local FILE_NAME=$(get_stack_output_file $STACK_NAME)
+    if [ ! -f $FILE_NAME ] ; then
+            aws cloudformation describe-stacks --stack-name $STACK_NAME | jq -r '[.Stacks[0].Outputs[] | {key: .OutputKey, value: .OutputValue}] | from_entries' > $FILE_NAME
+        fi
+    cat $FILE_NAME
+}
+
 function create_stack {
     typeset var local STACK_NAME=$1
     typeset var local STACK_BODY=$2
+    typeset var local STACK_FILE_NAME=$(get_stack_output_file $STACK_NAME)
     if ! stack_exists $STACK_NAME ; then
         aws cloudformation create-stack \
         --template-body file://${STACK_BODY}  \
@@ -27,13 +45,18 @@ function create_stack {
         aws cloudformation wait stack-create-complete \
         --stack-name ${STACK_NAME}
     fi
-    aws cloudformation describe-stacks --stack-name $STACK_NAME
+    #aws cloudformation describe-stacks --stack-name $STACK_NAME
+    if [ ! -f $STACK_FILE_NAME ] ; then
+        rm -f $STACK_FILE_NAME
+    fi
+    get_stack_outputs $STACK_NAME
 }
 
 function create_or_update_stack {
     typeset var local STACK_NAME=$1
     typeset var local STACK_BODY=$2
     typeset var local STACK_PARAMETERS=
+    typeset var local STACK_FILE_NAME=$(get_stack_output_file $STACK_NAME)
     if [ $# -gt 2 ] ; then
         STACK_PARAMETERS="$3"
     fi
@@ -63,32 +86,32 @@ function create_or_update_stack {
         aws cloudformation wait stack-create-complete \
         --stack-name ${STACK_NAME}
     fi
-    aws cloudformation describe-stacks --stack-name $STACK_NAME
-
-}
-
-function getTaskOutputs {
-    typeset var local STACK_NAME=$1
-    typeset var local FILE_NAME=
-    if [ $# -gt 1 ] ; then
-        FILE_NAME=$2
+    #aws cloudformation describe-stacks --stack-name $STACK_NAME
+    if [ ! -f $STACK_FILE_NAME ] ; then
+        rm -f $STACK_FILE_NAME
     fi
-    if [ ! -z $FILE_NAME ] ; then
-        if [ ! -f $FILE_NAME ] ; then
-            aws cloudformation describe-stacks --stack-name $STACK_NAME | jq -r '[.Stacks[0].Outputs[] | {key: .OutputKey, value: .OutputValue}] | from_entries' > $FILE_NAME
-        fi
-        cat $FILE_NAME
-    else
-        aws cloudformation describe-stacks --stack-name $STACK_NAME | jq -r '[.Stacks[0].Outputs[] | {key: .OutputKey, value: .OutputValue}] | from_entries'
-    fi
+    get_stack_outputs $STACK_NAME
 }
 
 function getTaskOutputsValue {
     typeset var local STACK_NAME=$1
     typeset var local VALUE=$2
-    typeset var local JSON_FILE=
-    if [ $# -gt 2 ] ; then
-        JSON_FILE=$3
+    get_stack_outputs $STACK_NAME | jq ". | .$VALUE" | sed 's/.*"\([^"]*\)".*/\1/'
+}
+
+function test_command {
+    typeset var local COMMAND=$1
+    typeset var local exitSts=0
+    which $COMMAND >/dev/null 2>&1
+    exitSts=$?
+    if [ $exitSts -eq 0 ] ; then
+        echo 0
+    else
+        echo 1
     fi
-    getTaskOutputs $STACK_NAME $JSON_FILE | jq ". | .$VALUE" | sed 's/.*"\([^"]*\)".*/\1/'
+}
+
+function command_exists {
+    typeset var local COMMAND="$1"
+    [ $(test_command "$COMMAND") -eq 0 ] 
 }
