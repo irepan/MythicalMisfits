@@ -70,6 +70,23 @@ Resources:
         - !Ref PublicSubnetOne
         - !Ref PublicSubnetTwo
 
+  MythicalNWLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub alb-nw-${AWS::StackName}
+      Scheme: internet-facing
+      Type: network
+      Subnets:
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+
+  MythicalVpcLink:
+    Type: AWS::ApiGateway::VpcLink
+    Properties:
+      Description: VPC Link for Mythical Misfits
+      Name: mythical-vpc-link
+      TargetArns:
+        - !Ref MythicalNWLoadBalancer
   # The security group for our service containers to be hosted in Fargate.
   # Even though traffic from users will pass through a Network Load Balancer,
   # that traffic is purely TCP passthrough, without security group inspection.
@@ -304,3 +321,22 @@ Outputs:
     Value: !GetAtt MythicalLoadBalancer.LoadBalancerFullName
     Export:
       Name: MythicalLoadBalancerFullName
+  MythicalNWLoadBalancer:
+    Description: NW Load Balancer definition
+    Value: !Ref MythicalNWLoadBalancer
+    Export:
+      Name: MythicalNWLoadBalancer
+  MythicalNWLoadBalancerDNSName:
+    Description: NW Load Balancer DNS Name
+    Value: !GetAtt MythicalNWLoadBalancer.DNSName
+    Export:
+      Name: MythicalNWLoadBalancerDNSName
+  MythicalNWLoadBalancerFULLName:
+    Description: NW Load Balancer DNS Full Name
+    Value: !GetAtt MythicalNWLoadBalancer.LoadBalancerFullName
+    Export:
+      Name: MythicalNWLoadBalancerFULLName
+  MythicalVpcLink:
+    Value: !Ref MythicalVpcLink
+    Export:
+      Name: MythicalVpcLink

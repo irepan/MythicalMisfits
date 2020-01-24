@@ -5,6 +5,6 @@ scriptDir=$(cd `dirname $0` ; pwd)
 
 STACK_NAME='MysfitsClusterStack'
 
-create_or_update_stack $STACK_NAME 'infrastructure/VPCDefinitions.yaml'
+create_or_update_stack $STACK_NAME 'infrastructure/cluster.yaml'
 
 

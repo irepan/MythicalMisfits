@@ -284,6 +284,11 @@ Outputs:
     Value: !Ref UserPool
     Export:
       Name: CognitoUserPoolId
+  CognitoUserPoolArn:
+    Description: Cognito Userpool Arn
+    Value: !GetAtt UserPool.Arn
+    Export:
+      Name: CognitoUserPoolArn
   CognitoUserPoolClientId:
     Description: Cognito UserPoolClientId
     Value: !Ref UserPoolClient

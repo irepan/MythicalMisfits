@@ -24,18 +24,18 @@ fi
 
 rm -f $scriptDir/../*.outputs.json 
 
-nohup $scriptDir/cognito.sh </dev/null >/dev/null 2>&1 &
-nohup $scriptDir/data.sh </dev/null >/dev/null 2>&1 &
+#nohup $scriptDir/cognito.sh </dev/null >/dev/null 2>&1 &
+#nohup $scriptDir/data.sh </dev/null >/dev/null 2>&1 &
 
-#get_stack_outputs MysfitsCognitoStack >/dev/null
-#get_stack_outputs MysfitsDynamoTable >/dev/null
+get_stack_outputs MysfitsCognitoStack >/dev/null
+get_stack_outputs MysfitsDynamoTable >/dev/null
 #get_stack_outputs MysfitsClusterStack >/dev/null
 #get_stack_outputs MysfitsMicroServiceStack >/dev/null
 
 $scriptDir/cluster.sh
 $scriptDir/microservice.sh
+$scriptDir/apigateway.sh
 $scriptDir/dockerOperations.sh
 
-
-$scriptDir/website.sh
+#$scriptDir/website.sh
 

@@ -17,22 +17,10 @@ Resources:
       RepositoryDescription: Repository for the Mythical Mysfits monolith service
       RepositoryName: !Sub ${AWS::StackName}-monolith-service
 
-  #  MythicalLikeGitRepository:
-  #    Type: AWS::CodeCommit::Repository
-  #    Properties:
-  #      RepositoryDescription: Repository for the Mythical Mysfits like service
-  #      RepositoryName: !Sub ${AWS::StackName}-like-service
-
   Mono:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: mythicalmysfits/service
-
-  #  Like:
-  #    Type: AWS::ECR::Repository
-
-  #  Xray:
-  #    Type: AWS::ECR::Repository
 
   MythicalEcsCluster:
     Type: AWS::ECS::Cluster
@@ -41,9 +29,6 @@ Resources:
 
   MythicalMonolithLogGroup:
     Type: AWS::Logs::LogGroup
-
-  #  MythicalLikeLogGroup:
-  #    Type: AWS::Logs::LogGroup
 
   MythicalMonolithTaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -87,38 +72,6 @@ Resources:
           ToPort: 8080
           CidrIp: 0.0.0.0/0
 
-  #  MythicalLikeTaskDefinition:
-  #    Type: AWS::ECS::TaskDefinition
-  #    Properties:
-  #      Cpu: 256
-  #      ExecutionRoleArn: !GetAtt EcsServiceRole.Arn
-  #      Family: !Sub Mythical-Mysfits-Like-Service-${AWS::StackName}
-  #      Memory: 512
-  #      NetworkMode: awsvpc
-  #      RequiresCompatibilities:
-  #        - FARGATE
-  #      TaskRoleArn: !GetAtt ECSTaskRole.Arn
-  #      ContainerDefinitions:
-  #        - Name: like-service
-  #          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Like}:latest
-  #          PortMappings:
-  #            - ContainerPort: 8080
-  #              Protocol: http
-  #          Environment:
-  #            - Name: MONOLITH_URL
-  #              Value: !ImportValue MythicalLoadBalancerDNSName
-  #            - Name: CHAOSMODE
-  #              Value: "on"
-  #            - Name: LOGLEVEL
-  #              Value: "ERROR"
-  #          LogConfiguration:
-  #            LogDriver: awslogs
-  #            Options:
-  #              awslogs-group: !Ref MythicalLikeLogGroup
-  #              awslogs-region: !Ref AWS::Region
-  #              awslogs-stream-prefix: awslogs-mythicalmysfits-service
-  #          Essential: true
-
   MythicalListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -141,32 +94,6 @@ Resources:
       Protocol: HTTP
       VpcId: !ImportValue VPC
       TargetType: ip
-
-  #  MythicalLikeTargetGroup:
-  #    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-  #    Properties:
-  #      HealthCheckIntervalSeconds: 10
-  #      HealthCheckPath: /
-  #      HealthCheckProtocol: HTTP
-  #      HealthyThresholdCount: 3
-  #      UnhealthyThresholdCount: 3
-  #      Port: 8080
-  #      Protocol: HTTP
-  #      VpcId: !ImportValue VPC
-  #      TargetType: ip
-  #
-  #  MythicalLikeListenerRule:
-  #    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-  #    Properties:
-  #      Actions:
-  #        - Type: forward
-  #          TargetGroupArn: !Ref MythicalLikeTargetGroup
-  #      Conditions:
-  #        - Field: path-pattern
-  #          Values:
-  #            - "/mysfits/*/like"
-  #      ListenerArn: !Ref MythicalListener
-  #      Priority: 1
 
   MythicalProfile:
     Type: AWS::IAM::InstanceProfile
@@ -281,20 +208,13 @@ Resources:
                 Action:
                   # Allows the ECS tasks to interact with only the MysfitsTable
                   # in DynamoDB
+                  - "dynamodb:Scan"
+                  - "dynamodb:Query"
                   - "dynamodb:UpdateItem"
                   - "dynamodb:GetItem"
-                  - "dynamodb:BatchGet*"
-                  - "dynamodb:DescribeStream"
-                  - "dynamodb:DescribeTable"
-                  - "dynamodb:Get*"
-                  - "dynamodb:Query"
-                  - "dynamodb:Scan"
-                  - "dynamodb:BatchWrite*"
-                  - "dynamodb:CreateTable"
-                  - "dynamodb:Delete*"
-                  - "dynamodb:Update*"
-                  - "dynamodb:PutItem"
-                Resource: "arn:aws:dynamodb:*:*:table/MysfitsTable"
+                Resource:
+                  - !ImportValue DynamoTableArn
+                  - !Join ["/", [!ImportValue DynamoTableArn, index/*]]
 
               - Effect: Allow
                 Action:
@@ -316,11 +236,6 @@ Outputs:
     Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Mono}:latest
     Export:
       Name: MonoRepoUrl
-  #  LikeRepoUrl:
-  #    Description: Like report URL
-  #    Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Like}:latest
-  #    Export:
-  #      Name: LikeRepoUrl
   MythicalMonolithTaskDefinition:
     Description: Mono Task Definition
     Value: !Ref MythicalMonolithTaskDefinition

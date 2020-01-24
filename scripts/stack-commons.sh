@@ -93,6 +93,20 @@ function create_or_update_stack {
     get_stack_outputs $STACK_NAME
 }
 
+function wait_for_stack_operation {
+    typeset var local STACK_NAME=$1
+    typeset var local exitSts=0
+    typeset var local STACK_OPERATION=$(aws cloudformation describe-stacks --stack-name MysfitsCognitoStack | jq ' .Stacks[0].StackStatus ' | grep -o -e 'CREATE' -e 'UPDATE' -e 'DELETE')
+    case $STACK_OPERATION in
+        'CREATE')
+            aws cloudformation wait stack-create-complete --stack-name $STACK_NAME
+            ;;
+        'UPDATE')
+            aws cloudformation wait stack-update-complete --stack-name $STACK_NAME
+            ;;
+    esac
+}
+
 function getTaskOutputsValue {
     typeset var local STACK_NAME=$1
     typeset var local VALUE=$2

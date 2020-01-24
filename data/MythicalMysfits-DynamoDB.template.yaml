@@ -54,3 +54,7 @@ Outputs:
     Value: !GetAtt TableCD117FA1.Arn
     Export:
       Name: DynamoTableArn
+  DynamoTableIndexes:
+    Value: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}/:table/MysfitsTable/index/*
+    Export:
+      Name: DynamoTableIndexes

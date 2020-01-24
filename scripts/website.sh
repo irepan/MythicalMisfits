@@ -7,6 +7,12 @@ HOME_DIR=$(dirname $scriptDir)
 TEMP_DIR=$HOME_DIR/website
 FRONT_END_DIR=$HOME_DIR/frontend
 
+wait_for_stack_operation MysfitsMicroServiceStack
+
+wait_for_stack_operation MysfitsCognitoStack
+
+
+
 if [ -d $TEMP_DIR ] ; then
     rm -Rf $TEMP_DIR
 fi

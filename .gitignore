@@ -2,3 +2,4 @@
 infrastructure/core.yml
 infrastructure/leftconfig.cfn.yaml
 website/
+*.temp.yaml
