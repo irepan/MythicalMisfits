@@ -43,7 +43,11 @@ Resources:
                 connectionId: !ImportValue MythicalVpcLink
                 httpMethod: GET
                 type: HTTP_PROXY
-                uri: !Join ["","http://" { "ImportValue", "MythicalNWLoadBalancerDNSName"},"/"]]
+                uri: !Join
+                  - ""
+                  - - "http://"
+                    - !ImportValue MythicalNWLoadBalancerDNSName
+                    - "/"
             options:
               summary: CORS support
               description: "Enable CORS by returning correct headers"
@@ -96,7 +100,11 @@ Resources:
                 connectionId: !ImportValue MythicalVpcLink
                 httpMethod: GET
                 type: HTTP_PROXY
-                uri: !Join ["","http://" { "ImportValue", "MythicalNWLoadBalancerDNSName"},"/mysfits"]]
+                uri: !Join
+                  - ""
+                  - - "http://"
+                    - !ImportValue MythicalNWLoadBalancerDNSName
+                    - "/mysfits"
                 responses:
                   default:
                     statusCode: "200"
@@ -163,7 +171,11 @@ Resources:
                 connectionId: !ImportValue MythicalVpcLink
                 httpMethod: GET
                 type: HTTP_PROXY
-                uri: !Join ["","http://" { "ImportValue", "MythicalNWLoadBalancerDNSName"},"/mysfits/{mysfitId}"]]
+                uri: !Join
+                  - ""
+                  - - "http://"
+                    - !ImportValue MythicalNWLoadBalancerDNSName
+                    - "/mysfits/{mysfitId}"
                 responses:
                   default:
                     statusCode: "200"
@@ -232,7 +244,11 @@ Resources:
                 connectionId: !ImportValue MythicalVpcLink
                 httpMethod: POST
                 type: HTTP_PROXY
-                uri: !Join ["","http://" { "ImportValue", "MythicalNWLoadBalancerDNSName"},"/mysfits/{mysfitId}/adopt"]]
+                uri: !Join
+                  - ""
+                  - - "http://"
+                    - !ImportValue MythicalNWLoadBalancerDNSName
+                    - "/mysfits/{mysfitId}/adopt"
                 responses:
                   default:
                     statusCode: "200"
@@ -310,7 +326,11 @@ Resources:
                 security:
                   - MysfitsUserPoolAuthorizer: []
                 type: HTTP_PROXY
-                uri: !Join ["","http://" { "ImportValue", "MythicalNWLoadBalancerDNSName"},"/mysfits/{mysfitId}/like"]]
+                uri: !Join
+                  - ""
+                  - - "http://"
+                    - !ImportValue MythicalNWLoadBalancerDNSName
+                    - "/mysfits/{mysfitId}/like"
             options:
               summary: CORS support
               description: "Enable CORS by returning correct headers"
@@ -350,3 +370,9 @@ Resources:
       Name: MysfitsApi
       Parameters:
         endpointConfigurationTypes: REGIONAL
+Outputs:
+  MysfitsApiGetway:
+    Description: Mysfits ApiGetway
+    Value: !Ref RestApi
+    Export:
+      Name: MysfitsApiGetway
