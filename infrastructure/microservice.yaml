@@ -1,6 +1,12 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 Description: This deploys the microservice definitions
+Parameters:
+  # Name for the VPC Cluster stach
+  ClusterStackName:
+    Description: Enter a name for the Created cluster stack.
+    Type: String
+    Default: MysfitsClusterStack
 
 Resources:
   MythicalBucket:
@@ -34,22 +40,24 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     Properties:
       Cpu: 256
-      ExecutionRoleArn: !GetAtt EcsServiceRole.Arn
+      ExecutionRoleArn:
+        Fn::ImportValue: !Sub "${ClusterStackName}:EcsServiceRoleArn"
       Family: !Sub Mythical-Mysfits-Monolith-Service-${AWS::StackName}
       Memory: 512
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      TaskRoleArn:
+        Fn::ImportValue: !Sub "${ClusterStackName}:ECSTaskRole"
       ContainerDefinitions:
-        - Name: monolith-service
+        - Name: MythicalMysfits-Service
           Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Mono}:latest
           PortMappings:
             - ContainerPort: 8080
               Protocol: http
           Environment:
             - Name: UPSTREAM_URL
-              Value: !ImportValue MythicalLoadBalancerDNSName
+              Value: !GetAtt MythicalLoadBalancer.DNSName
             - Name: DDB_TABLE_NAME
               Value: !ImportValue DynamoTable
           LogConfiguration:
@@ -59,172 +67,50 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: awslogs-mythicalmysfits-service
           Essential: true
-  MythicaTaskSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: !Sub MythicalTask-SG-${AWS::StackName}
-      GroupDescription: Access to the mythicaltask
-      VpcId: !ImportValue VPC
-      SecurityGroupIngress:
-        # Allow access to ALB from anywhere on the internet
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
 
-  MythicalListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
+  MythicalLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      DefaultActions:
-        - TargetGroupArn: !Ref MythicalMonolithTargetGroup
-          Type: forward
-      LoadBalancerArn: !ImportValue MythicalLoadBalancer
-      Port: 80
-      Protocol: HTTP
+      Name: !Sub alb-${AWS::StackName}
+      #Scheme: internet-facing
+      Scheme: internal
+      Type: network
+      Subnets:
+        - Fn::ImportValue: !Sub "${ClusterStackName}:PublicSubnetOne"
+        - Fn::ImportValue: !Sub "${ClusterStackName}:PublicSubnetTwo"
 
-  MythicalMonolithTargetGroup:
+  MythicalMysfitsTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
+      Name: MythicalMysfits-TargetGroup
       HealthCheckIntervalSeconds: 10
       HealthCheckPath: /
       HealthCheckProtocol: HTTP
       HealthyThresholdCount: 3
       UnhealthyThresholdCount: 3
-      Port: 80
-      Protocol: HTTP
-      VpcId: !ImportValue VPC
+      Port: 8080
+      Protocol: TCP
+      VpcId:
+        Fn::ImportValue: !Sub "${ClusterStackName}:VPCId"
       TargetType: ip
 
-  MythicalProfile:
-    Type: AWS::IAM::InstanceProfile
+  MythicalListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      Roles:
-        - !Ref ECSTaskRole
+      DefaultActions:
+        - TargetGroupArn: !Ref MythicalMysfitsTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref MythicalLoadBalancer
+      Port: 80
+      Protocol: TCP
 
-  # This is an IAM role which authorizes ECS to manage resources on your
-  # account on your behalf, such as updating your load balancer with the
-  # details of where your containers are, so that traffic can reach your
-  # containers.
-  EcsServiceRole:
-    Type: AWS::IAM::Role
+  MythicalVpcLink:
+    Type: AWS::ApiGateway::VpcLink
     Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ecs.amazonaws.com
-                - ecs-tasks.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: ecs-service
-          PolicyDocument:
-            Statement:
-              - Effect: Allow
-                Action:
-                  # Rules which allow ECS to attach network interfaces to instances
-                  # on your behalf in order for awsvpc networking mode to work right
-                  - "ec2:AttachNetworkInterface"
-                  - "ec2:CreateNetworkInterface"
-                  - "ec2:CreateNetworkInterfacePermission"
-                  - "ec2:DeleteNetworkInterface"
-                  - "ec2:DeleteNetworkInterfacePermission"
-                  - "ec2:Describe*"
-                  - "ec2:DetachNetworkInterface"
-
-                  # Rules which allow ECS to update load balancers on your behalf
-                  # with the information sabout how to send traffic to your containers
-                  - "elasticloadbalancing:DeregisterInstancesFromLoadBalancer"
-                  - "elasticloadbalancing:DeregisterTargets"
-                  - "elasticloadbalancing:Describe*"
-                  - "elasticloadbalancing:RegisterInstancesWithLoadBalancer"
-                  - "elasticloadbalancing:RegisterTargets"
-
-                  # Rules which allow ECS to run tasks that have IAM roles assigned to them.
-                  - "iam:PassRole"
-
-                  # Rules that let ECS interact with container images.
-                  - "ecr:GetAuthorizationToken"
-                  - "ecr:BatchCheckLayerAvailability"
-                  - "ecr:GetDownloadUrlForLayer"
-                  - "ecr:BatchGetImage"
-
-                  # Rules that let ECS create and push logs to CloudWatch.
-                  - "logs:DescribeLogStreams"
-                  - "logs:CreateLogStream"
-                  - "logs:CreateLogGroup"
-                  - "logs:PutLogEvents"
-
-                Resource: "*"
-
-  # This is a role which is used by the ECS tasks. Tasks in Amazon ECS define
-  # the containers that should be deployed togehter and the resources they
-  # require from a compute/memory perspective. So, the policies below will define
-  # the IAM permissions that our Mythical Mysfits docker containers will have.
-  # If you attempted to write any code for the Mythical Mysfits service that
-  # interacted with different AWS service APIs, these roles would need to include
-  # those as allowed actions.
-  ECSTaskRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ecs-tasks.amazonaws.com
-                # Also add EC2 for testing in Cloud9
-                - ec2.amazonaws.com
-            Action: ["sts:AssumeRole"]
-      Path: /
-      Policies:
-        - PolicyName: AmazonECSTaskRolePolicy
-          PolicyDocument:
-            Statement:
-              - Effect: Allow
-                Action:
-                  # Allow the ECS Tasks to download images from ECR
-                  - "ecr:GetAuthorizationToken"
-                  - "ecr:BatchCheckLayerAvailability"
-                  - "ecr:GetDownloadUrlForLayer"
-                  - "ecr:BatchGetImage"
-
-                  # Allow the ECS tasks to upload logs to CloudWatch
-                  - "logs:CreateLogStream"
-                  - "logs:CreateLogGroup"
-                  - "logs:PutLogEvents"
-                Resource: "*"
-
-              - Effect: Allow
-                Action:
-                  - "dynamodb:List*"
-                  - "dynamodb:DescribeReservedCapacity*"
-                  - "dynamodb:DescribeLimits"
-                  - "dynamodb:DescribeTimeToLive"
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  # Allows the ECS tasks to interact with only the MysfitsTable
-                  # in DynamoDB
-                  - "dynamodb:Scan"
-                  - "dynamodb:Query"
-                  - "dynamodb:UpdateItem"
-                  - "dynamodb:GetItem"
-                Resource:
-                  - !ImportValue DynamoTableArn
-                  - !Join ["/", [!ImportValue DynamoTableArn, index/*]]
-
-              - Effect: Allow
-                Action:
-                  # Allows the X-Ray sidecar to send telemetry data to X-Ray API
-                  - "xray:PutTraceSegments"
-                  - "xray:PutTelemetryRecords"
-                  - "xray:GetSamplingRules"
-                  - "xray:GetSamplingTargets"
-                  - "xray:GetSamplingStatisticSummaries"
-                Resource: "*"
+      Description: VPC Link for Mythical Misfits
+      Name: MysfitsApiVpcLink
+      TargetArns:
+        - !Ref MythicalLoadBalancer
 Outputs:
   Mono:
     Description: Docker container for Mono repository
@@ -246,16 +132,26 @@ Outputs:
     Value: !Ref MythicalEcsCluster
     Export:
       Name: MythicalEcsCluster
-  MythicaTaskSecurityGroup:
-    Description: Mythical task SecurityGroup
-    Value: !Ref MythicaTaskSecurityGroup
-    Export:
-      Name: MythicaTaskSecurityGroup
-  MythicalMonolithTargetGroup:
+  MythicalMysfitsTargetGroup:
     Description: Mythical monolith target group
-    Value: !Ref MythicalMonolithTargetGroup
+    Value: !Ref MythicalMysfitsTargetGroup
     Export:
-      Name: MythicalMonolithTargetGroup
+      Name: MythicalMysfitsTargetGroup
+  MythicalLoadBalancer:
+    Description: Load Balancer definition
+    Value: !Ref MythicalLoadBalancer
+    Export:
+      Name: MythicalLoadBalancer
+  MythicalLoadBalancerDNSName:
+    Description: Load Balancer DNS Name
+    Value: !GetAtt MythicalLoadBalancer.DNSName
+    Export:
+      Name: MythicalLoadBalancerDNSName
+  MythicalVpcLink:
+    Description: Mythical VPC Link
+    Value: !Ref MythicalVpcLink
+    Export:
+      Name: MythicalVpcLink
   SiteBucket:
     Value: !Ref MythicalBucket
   S3WebsiteEndpoint:

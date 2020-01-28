@@ -10,13 +10,13 @@ TASK_FILE="$scriptDir/../TASK_PROPERTIES.outputs.json"
 ECR_Container=$(getTaskOutputsValue $STACK_NAME MonoRepoUrl)
 MONO_TASK_DEFINITION=$(getTaskOutputsValue $STACK_NAME MythicalMonolithTaskDefinition)
 TASK_CLUSTER=$(getTaskOutputsValue $STACK_NAME MythicalEcsCluster)
-TASK_SECURITY_GROUP=$(getTaskOutputsValue $STACK_NAME MythicaTaskSecurityGroup)
-MYTHICAL_TARGET_GROUP=$(getTaskOutputsValue $STACK_NAME MythicalMonolithTargetGroup)
+MYTHICAL_TARGET_GROUP=$(getTaskOutputsValue $STACK_NAME MythicalMysfitsTargetGroup)
 LOAD_BALANCER_NAME=$(getTaskOutputsValue $STACK_NAME MythicalLoadBalancer)
 
 VPC_TASK_CLUSTER=$(getTaskOutputsValue $CLUSTER_STACK_NAME VPC)
 PRIVATE_SUBNET_ONE=$(getTaskOutputsValue $CLUSTER_STACK_NAME PrivateSubnetOne)
 PRIVATE_SUBNET_TWO=$(getTaskOutputsValue $CLUSTER_STACK_NAME PrivateSubnetTwo)
+TASK_SECURITY_GROUP=$(getTaskOutputsValue $CLUSTER_STACK_NAME FargateContainerSecurityGroup)
 
 # Login to docker
 docker_login=$(aws ecr get-login --no-include-email --region $REGION)
@@ -35,5 +35,6 @@ cd $CURDIR
 
 aws ecs create-service --cluster $TASK_CLUSTER --service-name 'mysfits-service' --task-definition $MONO_TASK_DEFINITION \
     --launch-type FARGATE --desired-count 1 \
-    --network-configuration "awsvpcConfiguration={subnets=[\"$PRIVATE_SUBNET_ONE\",\"$PRIVATE_SUBNET_TWO\"],securityGroups=[\"$TASK_SECURITY_GROUP\"],assignPublicIp=\"ENABLED\"}" \
-    --load-balancers "targetGroupArn=$MYTHICAL_TARGET_GROUP,containerName=monolith-service,containerPort=8080" 
+    --deployment-configuration "maximumPercent=200,minimumHealthyPercent=0" \
+    --network-configuration "awsvpcConfiguration={subnets=[\"$PRIVATE_SUBNET_ONE\",\"$PRIVATE_SUBNET_TWO\"],securityGroups=[\"$TASK_SECURITY_GROUP\"],assignPublicIp=\"DISABLED\"}" \
+    --load-balancers "targetGroupArn=$MYTHICAL_TARGET_GROUP,containerName=MythicalMysfits-Service,containerPort=8080" 
