@@ -30,14 +30,14 @@ You will be creating and deploying the required infrastructure to support this a
 - AWS account - if you don't have one, it's easy and free to [create one](https://aws.amazon.com/)
 - AWS IAM account with elevated privileges allowing you to interact with various AWS Services
 - ###### A computer with the following OS
-- Linux
-- - MacOSX
+  - Linux
+  - MacOSX
 - ###### The following commands MUST be isntalled in order to make it work
 
-1. aws (AWS CLI).
-2. docker (Docker CLI)
-3. curl (commmand curl must be installed).
-4. jq (JSON Query command for either Linux or MacOSX according to the OS you have installed) for linux it can be installed using `yum install jq` or `apt-get install jq` depending on the distro you are using, and for mac you can install it using the Homebrew channel with the command `brew install jq`.
+1. `aws` (AWS CLI).
+2. `docker` (Docker CLI)
+3. `curl` (commmand curl must be installed).
+4. `jq`(JSON Query command for either Linux or MacOSX according to the OS you have installed) for linux it can be installed using `yum install jq` or `apt-get install jq` depending on the distro you are using, and for mac you can install it using the Homebrew channel with the command `brew install jq`.
 
 ### Helper scripts
 
